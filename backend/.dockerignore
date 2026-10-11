@@ -1,0 +1,11 @@
+# Archivos que NO deben entrar al contexto de build de Docker
+target/
+.git/
+.gitignore
+.idea/
+*.iml
+*.log
+mvnw
+mvnw.cmd
+.mvn/
+README.md

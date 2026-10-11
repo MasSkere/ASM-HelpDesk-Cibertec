@@ -1,0 +1,110 @@
+# =============================================================================
+#  ASM-HelpDesk-Cibertec — Orquestación de contenedores con Docker Compose
+#  ---------------------------------------------------------------------------
+#  Fase 1 (actual): levanta únicamente PostgreSQL.
+#  Fase 2 (futuro) : descomentar los servicios `backend` y `frontend`.
+#
+#  Uso:
+#    docker compose up -d        # Levanta la BD en segundo plano
+#    docker compose ps           # Ver estado
+#    docker compose logs -f db   # Ver logs de la BD
+#    docker compose down         # Detener (conserva el volumen)
+#    docker compose down -v      # Detener y BORRAR los datos (¡cuidado!)
+# =============================================================================
+
+name: asm-helpdesk
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 15+ (Base de datos del sistema)
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: asm-helpdesk-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-helpdesk_db}
+      POSTGRES_USER: ${POSTGRES_USER:-helpdesk_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-helpdesk_pwd}
+      # Directorio de datos dentro del contenedor (buena práctica con volúmenes)
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: America/Lima
+    ports:
+      # host:contenedor  -> 5432 expuesto para conectarse con DBeaver/psql/pgAdmin
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # 1) Volumen persistente: los datos sobreviven a `docker compose down`
+      - postgres_data:/var/lib/postgresql/data
+      # 2) Scripts de inicialización: SOLO se ejecutan la PRIMERA vez que se
+      #    crea el volumen (volumen vacío). Para re-ejecutar: `down -v` y volver a levantar.
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      # - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-helpdesk_admin} -d ${POSTGRES_DB:-helpdesk_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - helpdesk-net
+
+  # ---------------------------------------------------------------------------
+  # [FUTURO] Monolito Spring Boot
+  # Se activará cuando exista backend/Dockerfile y el código del backend.
+  # ---------------------------------------------------------------------------
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: asm-helpdesk-backend
+  #   restart: unless-stopped
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   environment:
+  #     SPRING_PROFILES_ACTIVE: prod
+  #     # El host de la BD es el NOMBRE DEL SERVICIO dentro de la red: "db"
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-helpdesk_db}
+  #     SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-helpdesk_admin}
+  #     SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-helpdesk_pwd}
+  #     JWT_SECRET: ${JWT_SECRET:-cambiar_esta_clave_en_produccion_min_32_chars}
+  #     JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+  #   ports:
+  #     - "${BACKEND_PORT:-8080}:8080"
+  #   networks:
+  #     - helpdesk-net
+
+  # ---------------------------------------------------------------------------
+  # [FUTURO] Frontend React (servido con Nginx)
+  # Se activará cuando exista frontend/Dockerfile.
+  # ---------------------------------------------------------------------------
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #     args:
+  #       # URL pública del API que consumirá el bundle de React
+  #       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api}
+  #   container_name: asm-helpdesk-frontend
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - backend
+  #   ports:
+  #     - "${FRONTEND_PORT:-3000}:80"
+  #   networks:
+  #     - helpdesk-net
+
+# -----------------------------------------------------------------------------
+# Volúmenes
+# -----------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    name: asm-helpdesk-postgres-data
+
+# -----------------------------------------------------------------------------
+# Red interna compartida por todos los servicios
+# -----------------------------------------------------------------------------
+networks:
+  helpdesk-net:
+    name: asm-helpdesk-net
+    driver: bridge

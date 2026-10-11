@@ -1,0 +1,30 @@
+# --- Secretos / entorno ---
+.env
+*.env.local
+
+# --- Backend (Java / Maven / Gradle) ---
+backend/target/
+backend/build/
+backend/.mvn/wrapper/maven-wrapper.jar
+!backend/.mvn/wrapper/maven-wrapper.properties
+*.class
+
+# --- Frontend (Node) ---
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+npm-debug.log*
+yarn-error.log*
+
+# --- IDEs ---
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# --- Sistema operativo ---
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+*.log

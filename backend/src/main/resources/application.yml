@@ -1,0 +1,87 @@
+# =============================================================================
+#  ASM-HelpDesk-Cibertec — Configuración base del BACKEND (Monolito Spring Boot)
+# -----------------------------------------------------------------------------
+#  Todos los valores sensibles se leen de VARIABLES DE ENTORNO.
+#  Sintaxis: ${VARIABLE:valor_por_defecto}
+# =============================================================================
+
+server:
+  port: ${BACKEND_PORT:8080}
+  error:
+    # No exponer detalles internos ni stacktraces al cliente
+    include-message: never
+    include-stacktrace: never
+
+spring:
+  application:
+    name: asm-helpdesk-backend
+
+  # ----------------------------- Datasource ---------------------------------
+  datasource:
+    # Acepta SPRING_DATASOURCE_URL directa (docker) o se arma con DB_HOST/DB_PORT/POSTGRES_DB
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${POSTGRES_DB:helpdesk_db}}
+    username: ${SPRING_DATASOURCE_USERNAME:${POSTGRES_USER:helpdesk_admin}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${POSTGRES_PASSWORD:helpdesk_pwd}}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: AsmHelpDeskPool
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  # ------------------------------- JPA/Hibernate -----------------------------
+  jpa:
+    # El esquema lo define database/schema.sql -> Hibernate solo valida.
+    # Cambiar a `update` SOLO para desarrollo local rápido.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    show-sql: ${JPA_SHOW_SQL:true}
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: America/Lima
+
+  # ---------------------------------- JSON ----------------------------------
+  jackson:
+    default-property-inclusion: non_null
+    time-zone: America/Lima
+
+# =============================================================================
+#  Seguridad — JWT (usado por JwtService en la Fase 3)
+# =============================================================================
+security:
+  jwt:
+    # Mínimo 32 caracteres (HS256). En producción SIEMPRE por variable de entorno.
+    secret: ${JWT_SECRET:cambiar_esta_clave_en_produccion_minimo_32_caracteres}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}   # 24 h
+
+# =============================================================================
+#  Configuración propia de la aplicación
+# =============================================================================
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+
+# =============================================================================
+#  Actuator (healthcheck para Docker Compose)
+# =============================================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+# =============================================================================
+#  Logging
+# =============================================================================
+logging:
+  level:
+    root: INFO
+    com.cibertec.helpdesk: DEBUG
+    org.hibernate.SQL: DEBUG

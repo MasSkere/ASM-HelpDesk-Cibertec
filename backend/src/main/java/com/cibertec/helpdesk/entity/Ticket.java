@@ -13,6 +13,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -34,10 +36,11 @@ public class Ticket {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_ticket")
-    private Long idTicket;
+    private Integer idTicket;
 
-    /** Código legible único, ej. "TCK-2026-0001". */
-    @Column(name = "codigo", nullable = false, length = 20, unique = true)
+    /** Codigo generado automaticamente por PostgreSQL. */
+    @Generated(event = EventType.INSERT)
+    @Column(name = "codigo", nullable = false, length = 20, unique = true, insertable = false, updatable = false)
     private String codigo;
 
     @Column(name = "asunto", nullable = false, length = 150)
@@ -66,11 +69,11 @@ public class Ticket {
     // FK sin relación JPA (hasta que se implementen las relaciones)
     // ------------------------------------------------------------------
     @Column(name = "id_solicitante", nullable = false)
-    private Long idSolicitante;
+    private Integer idSolicitante;
 
     @Column(name = "id_tecnico")
-    private Long idTecnico;
+    private Integer idTecnico;
 
     @Column(name = "id_categoria", nullable = false)
-    private Long idCategoria;
+    private Integer idCategoria;
 }

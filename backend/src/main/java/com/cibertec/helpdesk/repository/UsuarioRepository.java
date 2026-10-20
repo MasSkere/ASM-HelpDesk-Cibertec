@@ -4,10 +4,12 @@ import com.cibertec.helpdesk.entity.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-/**
- * Repositorio de {@link Usuario}.
- * Vacío a propósito: los programadores backend definen las consultas aquí.
- */
+import java.util.Optional;
+
 @Repository
-public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
+public interface UsuarioRepository
+        extends JpaRepository<Usuario, Integer> {
+
+    Optional<Usuario> findByCorreo(String correo);
+
 }

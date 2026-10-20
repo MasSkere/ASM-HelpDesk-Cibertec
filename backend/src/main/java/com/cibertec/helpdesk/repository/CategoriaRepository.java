@@ -9,5 +9,5 @@ import org.springframework.stereotype.Repository;
  * Vacío a propósito: los programadores backend definen las consultas aquí.
  */
 @Repository
-public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
+public interface CategoriaRepository extends JpaRepository<Categoria, Integer> {
 }

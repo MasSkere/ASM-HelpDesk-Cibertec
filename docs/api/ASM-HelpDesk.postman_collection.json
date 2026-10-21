@@ -1,0 +1,1734 @@
+{
+  "info": {
+    "_postman_id": "c8d6f2a5-7d6f-4e87-a3d8-asmhelpdeskqa001",
+    "name": "ASM HelpDesk - QA Jesús",
+    "description": "Colección QA de Jesús para validar las APIs reales del backend ASM-HelpDesk-Cibertec. No contiene contraseñas reales. Completar passwords en el Environment antes de ejecutar.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "ticket_id",
+      "value": ""
+    },
+    {
+      "key": "tecnico_id",
+      "value": "2"
+    },
+    {
+      "key": "categoria_id",
+      "value": "1"
+    },
+    {
+      "key": "nonexistent_id",
+      "value": "999999"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Precondiciones",
+      "item": [
+        {
+          "name": "QA-001 Health público",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            },
+            "description": "Comprueba que el backend esté levantado antes de ejecutar la colección."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Health UP\", function () { const j=pm.response.json(); pm.expect(j.status).to.eql(\"UP\"); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-002 Categorías sin token debe rechazarse",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/categorias",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "categorias"
+              ]
+            },
+            "description": "La lectura de categorías exige autenticación según SecurityConfig."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Autenticación",
+      "item": [
+        {
+          "name": "QA-003 Login administrador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"La respuesta contiene token JWT\", function () { pm.expect(data.token).to.be.a(\"string\").and.not.empty; });",
+                  "pm.test(\"Rol esperado: ADMINISTRADOR\", function () { pm.expect(data.rol).to.eql(\"ADMINISTRADOR\"); });",
+                  "if (pm.response.code === 200 && data.token) pm.environment.set(\"token_admin\", data.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-004 Login técnico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{tecnico_email}}\",\n  \"password\": \"{{tecnico_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"La respuesta contiene token JWT\", function () { pm.expect(data.token).to.be.a(\"string\").and.not.empty; });",
+                  "pm.test(\"Rol esperado: TECNICO\", function () { pm.expect(data.rol).to.eql(\"TECNICO\"); });",
+                  "if (pm.response.code === 200 && data.token) pm.environment.set(\"token_tecnico\", data.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-005 Login estudiante",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{estudiante_email}}\",\n  \"password\": \"{{estudiante_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"La respuesta contiene token JWT\", function () { pm.expect(data.token).to.be.a(\"string\").and.not.empty; });",
+                  "pm.test(\"Rol esperado: ESTUDIANTE\", function () { pm.expect(data.rol).to.eql(\"ESTUDIANTE\"); });",
+                  "if (pm.response.code === 200 && data.token) pm.environment.set(\"token_estudiante\", data.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-006 Login docente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{docente_email}}\",\n  \"password\": \"{{docente_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"La respuesta contiene token JWT\", function () { pm.expect(data.token).to.be.a(\"string\").and.not.empty; });",
+                  "pm.test(\"Rol esperado: DOCENTE\", function () { pm.expect(data.rol).to.eql(\"DOCENTE\"); });",
+                  "if (pm.response.code === 200 && data.token) pm.environment.set(\"token_docente\", data.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-007 Login contraseña incorrecta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{estudiante_email}}\",\n  \"password\": \"CONTRASENA_INCORRECTA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Credenciales incorrectas deben rechazarse\", function () { pm.expect(pm.response.code).to.be.oneOf([400,401,403]); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-008 Login correo inválido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"correo-invalido\",\n  \"password\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Categorías",
+      "item": [
+        {
+          "name": "QA-009 Listar categorías autenticado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_estudiante}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/categorias",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "categorias"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Devuelve arreglo\", function () { pm.expect(pm.response.json()).to.be.an(\"array\"); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-010 Buscar categoría existente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_estudiante}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/categorias/{{categoria_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "categorias",
+                "{{categoria_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-011 Buscar categoría inexistente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_estudiante}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/categorias/{{nonexistent_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "categorias",
+                "{{nonexistent_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Tickets solicitante",
+      "item": [
+        {
+          "name": "QA-012 Crear ticket válido - estudiante",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_estudiante}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asunto\": \"Prueba QA - WiFi laboratorio\",\n  \"descripcion\": \"Ticket generado por la colección Postman de Jesús para validar el flujo.\",\n  \"tipoSolicitud\": \"INCIDENTE\",\n  \"prioridad\": \"ALTA\",\n  \"idCategoria\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Ticket creado contiene id\", function () { pm.expect(data.idTicket).to.exist; });",
+                  "if (data.idTicket) pm.environment.set(\"ticket_id\", data.idTicket);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-013 Crear ticket válido - docente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_docente}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asunto\": \"Prueba QA docente\",\n  \"descripcion\": \"Validación de creación por rol DOCENTE.\",\n  \"tipoSolicitud\": \"REQUERIMIENTO\",\n  \"prioridad\": \"MEDIA\",\n  \"idCategoria\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-014 Crear ticket sin asunto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_estudiante}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asunto\": \"\",\n  \"descripcion\": \"Debe fallar por @NotBlank.\",\n  \"tipoSolicitud\": \"INCIDENTE\",\n  \"prioridad\": \"MEDIA\",\n  \"idCategoria\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-015 Crear ticket con categoría inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_estudiante}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asunto\": \"Categoría inválida\",\n  \"descripcion\": \"Prueba negativa.\",\n  \"tipoSolicitud\": \"INCIDENTE\",\n  \"prioridad\": \"MEDIA\",\n  \"idCategoria\": 999999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-016 Crear ticket con enum inválido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_estudiante}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asunto\": \"Enum inválido\",\n  \"descripcion\": \"Tipo de solicitud no permitido.\",\n  \"tipoSolicitud\": \"OTRO\",\n  \"prioridad\": \"MEDIA\",\n  \"idCategoria\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-017 Técnico no puede crear ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_tecnico}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asunto\": \"No autorizado\",\n  \"descripcion\": \"El rol TECNICO no puede registrar tickets por SecurityConfig.\",\n  \"tipoSolicitud\": \"INCIDENTE\",\n  \"prioridad\": \"BAJA\",\n  \"idCategoria\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-018 Listar mis tickets - estudiante",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_estudiante}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Devuelve arreglo\", function () { pm.expect(pm.response.json()).to.be.an(\"array\"); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-019 Consultar ticket propio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_estudiante}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets",
+                "{{ticket_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-020 Historial de ticket propio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_estudiante}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/historial",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets",
+                "{{ticket_id}}",
+                "historial"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Historial es arreglo\", function () { pm.expect(pm.response.json()).to.be.an(\"array\"); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-021 Ticket inexistente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_estudiante}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{nonexistent_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets",
+                "{{nonexistent_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-022 Listar tickets sin token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tickets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - Administración",
+      "item": [
+        {
+          "name": "QA-023 Listar usuarios - admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/usuarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "usuarios"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Devuelve arreglo de usuarios\", function () { pm.expect(pm.response.json()).to.be.an(\"array\"); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-024 Buscar usuario - admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/usuarios/{{tecnico_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "{{tecnico_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-025 Usuarios prohibido a estudiante",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_estudiante}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/usuarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "usuarios"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-026 Asignar técnico al ticket",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/asignar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets",
+                "{{ticket_id}}",
+                "asignar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idTecnico\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const data=pm.response.json();",
+                  "pm.test(\"Técnico asignado\", function () { pm.expect(data.idTecnico).to.eql(Number(pm.environment.get(\"tecnico_id\") || 2)); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-027 Asignar usuario no técnico",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/asignar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets",
+                "{{ticket_id}}",
+                "asignar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idTecnico\": \"{{estudiante_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-028 Asignar técnico inexistente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/asignar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets",
+                "{{ticket_id}}",
+                "asignar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idTecnico\": 999999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-029 Asignación prohibida a técnico",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_tecnico}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/asignar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets",
+                "{{ticket_id}}",
+                "asignar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idTecnico\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-030 Reporte KPI - admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reportes/kpi",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reportes",
+                "kpi"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-031 Reporte carga técnicos - admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reportes/carga-tecnicos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reportes",
+                "carga-tecnicos"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-032 Reporte sin asignar - admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reportes/sin-asignar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reportes",
+                "sin-asignar"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-033 Reportes prohibidos a estudiante",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_estudiante}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reportes/kpi",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reportes",
+                "kpi"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 - Técnico y estados",
+      "item": [
+        {
+          "name": "QA-034 Bandeja de técnico",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_tecnico}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/asignados",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets",
+                "asignados"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Devuelve arreglo\", function () { pm.expect(pm.response.json()).to.be.an(\"array\"); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-035 Bandeja técnico prohibida a estudiante",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_estudiante}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/asignados",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets",
+                "asignados"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-036 Cambiar REGISTRADO a EN_PROCESO",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_tecnico}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/estado",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets",
+                "{{ticket_id}}",
+                "estado"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"EN_PROCESO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-037 Cambiar EN_PROCESO a RESUELTO",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_tecnico}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/estado",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets",
+                "{{ticket_id}}",
+                "estado"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"RESUELTO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-038 Cambiar RESUELTO a CERRADO - admin",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/estado",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets",
+                "{{ticket_id}}",
+                "estado"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"CERRADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-039 Cambio inválido CERRADO a EN_PROCESO",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/estado",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets",
+                "{{ticket_id}}",
+                "estado"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"EN_PROCESO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA-040 Estudiante no puede cambiar estado",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_estudiante}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/estado",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tickets",
+                "{{ticket_id}}",
+                "estado"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"EN_PROCESO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

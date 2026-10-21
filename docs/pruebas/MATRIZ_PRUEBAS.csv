@@ -1,0 +1,41 @@
+﻿ID,Módulo,Método,Endpoint,Escenario / Precondición,Resultado esperado,Estado,Observación / Evidencia
+QA-001,Precondiciones,GET,/actuator/health,Sin token,200 + status UP,NO EJECUTADO,
+QA-002,Seguridad,GET,/api/categorias,Sin token,401,NO EJECUTADO,
+QA-003,Auth,POST,/api/auth/login,Admin válido,200 + JWT + rol ADMINISTRADOR,NO EJECUTADO,Bloqueado hasta contar con password QA válido
+QA-004,Auth,POST,/api/auth/login,Técnico válido,200 + JWT + rol TECNICO,NO EJECUTADO,Bloqueado hasta contar con password QA válido
+QA-005,Auth,POST,/api/auth/login,Estudiante válido,200 + JWT + rol ESTUDIANTE,NO EJECUTADO,Bloqueado hasta contar con password QA válido
+QA-006,Auth,POST,/api/auth/login,Docente válido,200 + JWT + rol DOCENTE,NO EJECUTADO,Bloqueado hasta contar con password QA válido
+QA-007,Auth,POST,/api/auth/login,Password incorrecto,"Rechazo 4xx, preferentemente 401",NO EJECUTADO,
+QA-008,Validación,POST,/api/auth/login,Correo con formato inválido,400,NO EJECUTADO,
+QA-009,Categorías,GET,/api/categorias,Token estudiante,200 + array,NO EJECUTADO,
+QA-010,Categorías,GET,/api/categorias/{id},Categoría existente,200,NO EJECUTADO,
+QA-011,Categorías,GET,/api/categorias/999999,ID inexistente,404,NO EJECUTADO,
+QA-012,Tickets,POST,/api/tickets,Estudiante + datos válidos,201 + idTicket,NO EJECUTADO,Guardar idTicket en variable
+QA-013,Tickets,POST,/api/tickets,Docente + datos válidos,201,NO EJECUTADO,
+QA-014,Validación,POST,/api/tickets,Asunto vacío,400,NO EJECUTADO,
+QA-015,Validación,POST,/api/tickets,Categoría inexistente,400,NO EJECUTADO,
+QA-016,Validación,POST,/api/tickets,tipoSolicitud inválido,400,NO EJECUTADO,
+QA-017,Seguridad,POST,/api/tickets,Token técnico,403,NO EJECUTADO,
+QA-018,Tickets,GET,/api/tickets,Token estudiante,200 + solo tickets propios,NO EJECUTADO,
+QA-019,Tickets,GET,/api/tickets/{ticket_id},Ticket propio,200,NO EJECUTADO,
+QA-020,Historial,GET,/api/tickets/{ticket_id}/historial,Ticket propio,200 + array,NO EJECUTADO,Depende de tabla historial_ticket
+QA-021,Tickets,GET,/api/tickets/999999,ID inexistente,404,NO EJECUTADO,
+QA-022,Seguridad,GET,/api/tickets,Sin token,401,NO EJECUTADO,
+QA-023,Usuarios,GET,/api/usuarios,Token admin,200 + array,NO EJECUTADO,
+QA-024,Usuarios,GET,/api/usuarios/{tecnico_id},Admin + usuario existente,200,NO EJECUTADO,
+QA-025,Seguridad,GET,/api/usuarios,Token estudiante,403,NO EJECUTADO,
+QA-026,Tickets,PATCH,/api/tickets/{ticket_id}/asignar,Admin + técnico válido,200 + idTecnico,NO EJECUTADO,
+QA-027,Validación,PATCH,/api/tickets/{ticket_id}/asignar,Admin + usuario no técnico,400,NO EJECUTADO,
+QA-028,Validación,PATCH,/api/tickets/{ticket_id}/asignar,Admin + técnico inexistente,400,NO EJECUTADO,
+QA-029,Seguridad,PATCH,/api/tickets/{ticket_id}/asignar,Token técnico,403,NO EJECUTADO,
+QA-030,Reportes,GET,/api/reportes/kpi,Token admin,200,NO EJECUTADO,Depende de vw_kpi_general
+QA-031,Reportes,GET,/api/reportes/carga-tecnicos,Token admin,200 + array,NO EJECUTADO,Depende de vw_carga_tecnicos
+QA-032,Reportes,GET,/api/reportes/sin-asignar,Token admin,200 + array,NO EJECUTADO,Depende de vw_tickets_sin_asignar
+QA-033,Seguridad,GET,/api/reportes/kpi,Token estudiante,403,NO EJECUTADO,
+QA-034,Técnico,GET,/api/tickets/asignados,Token técnico,200 + array,NO EJECUTADO,
+QA-035,Seguridad,GET,/api/tickets/asignados,Token estudiante,403,NO EJECUTADO,
+QA-036,Estados,PATCH,/api/tickets/{ticket_id}/estado,Técnico asignado + EN_PROCESO,200,NO EJECUTADO,
+QA-037,Estados,PATCH,/api/tickets/{ticket_id}/estado,Técnico asignado + RESUELTO,200,NO EJECUTADO,
+QA-038,Estados,PATCH,/api/tickets/{ticket_id}/estado,Admin + CERRADO,200,NO EJECUTADO,
+QA-039,Estados,PATCH,/api/tickets/{ticket_id}/estado,CERRADO -> EN_PROCESO,409,NO EJECUTADO,
+QA-040,Seguridad,PATCH,/api/tickets/{ticket_id}/estado,Token estudiante,403,NO EJECUTADO,

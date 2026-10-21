@@ -1,22 +1,24 @@
 # =============================================================================
 #  ASM-HelpDesk-Cibertec — Orquestación de contenedores con Docker Compose
 #  ---------------------------------------------------------------------------
-#  Fase 1 (actual): levanta únicamente PostgreSQL.
-#  Fase 2 (futuro) : descomentar los servicios `backend` y `frontend`.
+#  Servicios:
+#    db        -> PostgreSQL 16 (esquema completo en database/schema.sql)
+#    backend   -> Monolito Spring Boot (JWT + tickets + reportes)
+#    frontend  -> React + Nginx (se activa cuando exista frontend/Dockerfile)
 #
 #  Uso:
-#    docker compose up -d        # Levanta la BD en segundo plano
-#    docker compose ps           # Ver estado
-#    docker compose logs -f db   # Ver logs de la BD
-#    docker compose down         # Detener (conserva el volumen)
-#    docker compose down -v      # Detener y BORRAR los datos (¡cuidado!)
+#    docker compose up -d --build   # Levanta todo (BD + backend)
+#    docker compose ps              # Ver estado
+#    docker compose logs -f backend # Ver logs del backend
+#    docker compose down            # Detener (conserva el volumen)
+#    docker compose down -v         # Detener y BORRAR los datos (¡cuidado!)
 # =============================================================================
 
 name: asm-helpdesk
 
 services:
   # ---------------------------------------------------------------------------
-  # PostgreSQL 15+ (Base de datos del sistema)
+  # PostgreSQL 16 (Base de datos del sistema)
   # ---------------------------------------------------------------------------
   db:
     image: postgres:16-alpine
@@ -36,9 +38,10 @@ services:
       # 1) Volumen persistente: los datos sobreviven a `docker compose down`
       - postgres_data:/var/lib/postgresql/data
       # 2) Scripts de inicialización: SOLO se ejecutan la PRIMERA vez que se
-      #    crea el volumen (volumen vacío). Para re-ejecutar: `down -v` y volver a levantar.
+      #    crea el volumen (volumen vacío). Se ejecutan en orden alfabético.
+      #    Para re-ejecutar: `docker compose down -v` y volver a levantar.
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-      # - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      - ./database/datos_prueba.sql:/docker-entrypoint-initdb.d/02-datos.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-helpdesk_admin} -d ${POSTGRES_DB:-helpdesk_db}"]
       interval: 10s
@@ -49,50 +52,53 @@ services:
       - helpdesk-net
 
   # ---------------------------------------------------------------------------
-  # [FUTURO] Monolito Spring Boot
-  # Se activará cuando exista backend/Dockerfile y el código del backend.
+  # Monolito Spring Boot
   # ---------------------------------------------------------------------------
-  # backend:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile
-  #   container_name: asm-helpdesk-backend
-  #   restart: unless-stopped
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-  #   environment:
-  #     SPRING_PROFILES_ACTIVE: prod
-  #     # El host de la BD es el NOMBRE DEL SERVICIO dentro de la red: "db"
-  #     SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-helpdesk_db}
-  #     SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-helpdesk_admin}
-  #     SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-helpdesk_pwd}
-  #     JWT_SECRET: ${JWT_SECRET:-cambiar_esta_clave_en_produccion_min_32_chars}
-  #     JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
-  #   ports:
-  #     - "${BACKEND_PORT:-8080}:8080"
-  #   networks:
-  #     - helpdesk-net
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: asm-helpdesk-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # El host de la BD es el NOMBRE DEL SERVICIO dentro de la red: "db"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-helpdesk_db}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-helpdesk_admin}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-helpdesk_pwd}
+      JWT_SECRET: ${JWT_SECRET:-cambiar_esta_clave_en_produccion_min_32_chars}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      # Asistente IA — IBM watsonx.ai (credenciales desde .env; si faltan, modo local)
+      WATSONX_ENABLED: ${WATSONX_ENABLED:-true}
+      WATSONX_APIKEY: ${WATSONX_APIKEY:-}
+      WATSONX_URL: ${WATSONX_URL:-https://api.us-south.watsonx.ai.api.cloud.ibm.com}
+      WATSONX_PROJECT_ID: ${WATSONX_PROJECT_ID:-}
+      WATSONX_MODEL: ${WATSONX_MODEL:-ibm/granite-3-8b-instruct}
+      TZ: America/Lima
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    networks:
+      - helpdesk-net
 
   # ---------------------------------------------------------------------------
-  # [FUTURO] Frontend React (servido con Nginx)
-  # Se activará cuando exista frontend/Dockerfile.
+  # Frontend React + Vite (servido con Nginx)
+  # Nginx hace proxy de /api -> backend:8080 (misma red, sin CORS).
   # ---------------------------------------------------------------------------
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #     args:
-  #       # URL pública del API que consumirá el bundle de React
-  #       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api}
-  #   container_name: asm-helpdesk-frontend
-  #   restart: unless-stopped
-  #   depends_on:
-  #     - backend
-  #   ports:
-  #     - "${FRONTEND_PORT:-3000}:80"
-  #   networks:
-  #     - helpdesk-net
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: asm-helpdesk-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    networks:
+      - helpdesk-net
 
 # -----------------------------------------------------------------------------
 # Volúmenes

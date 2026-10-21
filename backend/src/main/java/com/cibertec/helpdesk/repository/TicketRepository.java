@@ -15,4 +15,7 @@ public interface TicketRepository
 
     // Tickets registrados por un solicitante
     List<Ticket> findByIdSolicitante(Integer idSolicitante);
+
+    // ¿Existen tickets asociados a una categoría? (para bloquear su borrado)
+    boolean existsByIdCategoria(Integer idCategoria);
 }

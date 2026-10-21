@@ -66,6 +66,19 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
 
 # =============================================================================
+#  Asistente IA — IBM watsonx.ai (credenciales SOLO por variables de entorno)
+#  Si faltan credenciales, el backend usa automáticamente el asistente local.
+# =============================================================================
+ibm:
+  watsonx:
+    enabled: ${WATSONX_ENABLED:true}
+    apikey: ${WATSONX_APIKEY:}
+    url: ${WATSONX_URL:https://api.us-south.watsonx.ai.api.cloud.ibm.com}
+    project-id: ${WATSONX_PROJECT_ID:}
+    model: ${WATSONX_MODEL:ibm/granite-3-8b-instruct}
+    timeout-seconds: ${WATSONX_TIMEOUT_SECONDS:60}
+
+# =============================================================================
 #  Actuator (healthcheck para Docker Compose)
 # =============================================================================
 management:

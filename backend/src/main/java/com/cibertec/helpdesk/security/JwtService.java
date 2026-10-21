@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Service
@@ -21,10 +22,33 @@ public class JwtService {
     @Value("${security.jwt.expiration-ms}")
     private long expirationMs;
 
-    // Obtener la clave secreta
+    // Obtener la clave secreta.
+    // Acepta el secreto como texto plano (passphrase) o como Base64.
+    // Si el texto decodificado en Base64 no alcanza 32 bytes, se usa UTF-8 directo.
     private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        byte[] keyBytes = resolverKeyBytes();
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    private byte[] resolverKeyBytes() {
+        byte[] raw = secretKey.getBytes(StandardCharsets.UTF_8);
+
+        try {
+            byte[] decoded = Decoders.BASE64.decode(secretKey);
+            // Solo se usa la interpretación Base64 si produce una clave HS256 válida.
+            if (decoded.length >= 32) {
+                return decoded;
+            }
+        } catch (RuntimeException ignored) {
+            // El secreto no es Base64: se trata como passphrase en UTF-8.
+        }
+
+        if (raw.length < 32) {
+            throw new IllegalStateException(
+                    "JWT_SECRET debe tener al menos 32 bytes (256 bits) para HS256");
+        }
+
+        return raw;
     }
 
     // Crear un token JWT

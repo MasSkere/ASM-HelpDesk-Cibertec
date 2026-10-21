@@ -28,7 +28,7 @@ public class HistorialTicketService {
             String correoUsuario) {
 
         // Verificar primero que el usuario pueda consultar el ticket.
-        ticketService.buscarPorId(idTicket, correoUsuario);
+        ticketService.validarAcceso(idTicket, correoUsuario);
 
         // Recuperar sus movimientos desde PostgreSQL.
         return historialRepository

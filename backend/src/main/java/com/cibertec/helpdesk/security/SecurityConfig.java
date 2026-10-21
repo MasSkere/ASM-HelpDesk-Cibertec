@@ -23,22 +23,15 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 /**
- * Configuración BASE de Spring Security (Fase 2).
+ * Configuración de Spring Security (JWT stateless).
  *
- * <p>
- * Deja preparada la seguridad stateless sin sesiones (JWT):
  * <ul>
  * <li>CSRF deshabilitado (no aplica con JWT).</li>
  * <li>Sesión STATELESS.</li>
  * <li>Rutas públicas y privadas definidas por rol.</li>
  * <li>Encoder BCrypt para contraseñas.</li>
+ * <li>Filtro JWT antes de UsernamePasswordAuthenticationFilter.</li>
  * </ul>
- *
- * <p>
- * <b>TODO Fase 3:</b> registrar el {@code JwtAuthenticationFilter} con
- * {@code .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)}
- * (ver INSTRUCCIONES_AGENTE.md, sección 5).
- * </p>
  */
 @Configuration
 @EnableWebSecurity
@@ -51,7 +44,7 @@ public class SecurityConfig {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
-    /** Rutas accesibles sin autenticación. */
+    /** Rutas accesibles sin autenticación (login y registro públicos). */
     private static final String[] PUBLIC_ROUTES = {
             "/api/auth/**",
             "/actuator/health",
@@ -86,16 +79,19 @@ public class SecurityConfig {
 
                         // -------- Tickets --------
                         // Estudiante y Docente pueden registrar tickets
-                        .requestMatchers(HttpMethod.POST, "/api/tickets").hasAnyRole("ESTUDIANTE", "DOCENTE")
+                        .requestMatchers(HttpMethod.POST, "/api/tickets")
+                        .hasAnyRole("ESTUDIANTE", "DOCENTE")
+
+                        // Bandeja "mis tickets" (solo solicitantes)
+                        .requestMatchers(HttpMethod.GET, "/api/tickets/mios")
+                        .hasAnyRole("ESTUDIANTE", "DOCENTE")
+
                         // Solo Técnico consulta la bandeja de asignados
                         .requestMatchers(
+                                HttpMethod.GET,
                                 "/api/tickets/asignados",
                                 "/api/tickets/asignados/**")
                         .hasRole("TECNICO")
-
-                        // Actualizaciones generales: Tecnico o Administrador
-                        .requestMatchers(HttpMethod.PUT, "/api/tickets/**")
-                        .hasAnyRole("TECNICO", "ADMINISTRADOR")
 
                         // Solo Administrador puede asignar tecnicos
                         .requestMatchers(HttpMethod.PATCH, "/api/tickets/*/asignar")
@@ -112,6 +108,11 @@ public class SecurityConfig {
                         // Lectura: cualquier usuario autenticado. Escritura: Administrador.
                         .requestMatchers(HttpMethod.GET, "/api/categorias/**").authenticated()
                         .requestMatchers("/api/categorias/**").hasRole("ADMINISTRADOR")
+
+                        // -------- Asistente IA (watsonx) --------
+                        // Cualquier usuario autenticado puede chatear y pedir
+                        // sugerencias para clasificar un ticket.
+                        .requestMatchers("/api/chatbot/**").authenticated()
 
                         // -------- Resto --------
                         .anyRequest().authenticated());

@@ -2,10 +2,12 @@ package com.cibertec.helpdesk.service;
 
 import com.cibertec.helpdesk.dto.request.AsignarTecnicoRequest;
 import com.cibertec.helpdesk.dto.request.CambiarEstadoRequest;
+import com.cibertec.helpdesk.dto.response.TicketResponse;
 import com.cibertec.helpdesk.entity.EstadoTicket;
 import com.cibertec.helpdesk.entity.Rol;
 import com.cibertec.helpdesk.entity.Ticket;
 import com.cibertec.helpdesk.entity.Usuario;
+import com.cibertec.helpdesk.mapper.TicketMapper;
 import com.cibertec.helpdesk.repository.CategoriaRepository;
 import com.cibertec.helpdesk.repository.TicketRepository;
 import com.cibertec.helpdesk.repository.UsuarioRepository;
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.NoSuchElementException;
@@ -34,6 +37,9 @@ class TicketServiceTest {
 
         @Mock
         private UsuarioRepository usuarioRepository;
+
+        @Spy
+        private TicketMapper ticketMapper = new TicketMapper();
 
         @InjectMocks
         private TicketService ticketService;
@@ -59,11 +65,11 @@ class TicketServiceTest {
                 when(usuarioRepository.findByCorreo(correo))
                                 .thenReturn(Optional.of(usuario));
 
-                Ticket resultado = ticketService.buscarPorId(1, correo);
+                TicketResponse resultado = ticketService.buscarPorId(1, correo);
 
                 assertNotNull(resultado);
-                assertEquals(1, resultado.getIdTicket());
-                assertEquals("Problema con el Wi-Fi", resultado.getAsunto());
+                assertEquals(1, resultado.idTicket());
+                assertEquals("Problema con el Wi-Fi", resultado.asunto());
 
                 verify(ticketRepository).findById(1);
                 verify(usuarioRepository).findByCorreo(correo);

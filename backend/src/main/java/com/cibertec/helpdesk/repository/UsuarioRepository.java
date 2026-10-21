@@ -12,4 +12,6 @@ public interface UsuarioRepository
 
     Optional<Usuario> findByCorreo(String correo);
 
+    /** Corregir duplicados sin distinguir mayúsculas (índice uq_usuarios_correo). */
+    boolean existsByCorreoIgnoreCase(String correo);
 }
